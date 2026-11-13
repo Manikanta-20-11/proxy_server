@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OS Proxy Client</title>
+<style>
+  :root {
+    --bg-page: #f8fafc;
+    --bg-card: #ffffff;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --border-color: #cbd5e1;
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --success-text: #15803d;
+    --error-text: #b91c1c;
+    --error-bg: #fef2f2;
+    --error-border: #fecaca;
+    --badge-blue-bg: #eff6ff;
+    --badge-blue-text: #1d4ed8;
+    --badge-blue-border: #bfdbfe;
+    --badge-green-bg: #ecfdf5;
+    --badge-green-text: #047857;
+    --badge-green-border: #a7f3d0;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-page);
+    color: var(--text-main);
+    margin: 0;
+    padding: 24px 16px;
+    line-height: 1.5;
+  }
+
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px 28px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+
+  header {
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+    color: #0f172a;
+  }
+
+  .sub {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin: 0;
+  }
+
+  .row {
+    display: flex;
+    gap: 10px;
+    margin: 18px 0 12px 0;
+  }
+
+  input[type=text] {
+    flex: 1;
+    padding: 10px 14px;
+    font-size: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    outline: none;
+    background: #fff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  input[type=text]:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  }
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid var(--border-color);
+    background: #f1f5f9;
+    color: var(--text-main);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  button:hover:not(:disabled) {
+    background: #e2e8f0;
+  }
+
+  button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  #fetchBtn {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+    min-width: 105px;
+  }
+
+  #fetchBtn:hover:not(:disabled) {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 7px;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  #message {
+    min-height: 24px;
+    margin: 10px 0 16px 0;
+    font-size: 14px;
+  }
+
+  .msg-error {
+    color: var(--error-text);
+    background: var(--error-bg);
+    border: 1px solid var(--error-border);
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: block;
+  }
+
+  .msg-success {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    color: var(--success-text);
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 9px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 9999px;
+    line-height: 1.4;
+  }
+
+  .badge-fetched {
+    background: var(--badge-blue-bg);
+    color: var(--badge-blue-text);
+    border: 1px solid var(--badge-blue-border);
+  }
+
+  .badge-cache {
+    background: var(--badge-green-bg);
+    color: var(--badge-green-text);
+    border: 1px solid var(--badge-green-border);
+  }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  #tabs {
+    display: none;
+    gap: 6px;
+  }
+
+  .tab-btn {
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    border-radius: 6px;
+  }
+
+  .tab-btn.active {
+    background: #0f172a;
+    color: #ffffff;
+    border-color: #0f172a;
+  }
+
+  .scripts-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    flex-wrap: wrap;
+  }
+
+  .checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    user-select: none;
+  }
+
+  .checkbox-label input[type=checkbox] {
+    cursor: pointer;
+    margin: 0;
+  }
+
+  .note {
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  #frame {
+    display: none;
+    width: 100%;
+    height: 560px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: #ffffff;
+  }
+
+  #sourceWrapper {
+    display: none;
+  }
+
+  .source-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 6px;
+  }
+
+  .btn-copy {
+    padding: 5px 12px;
+    font-size: 12px;
+    background: #ffffff;
+  }
+
+  #source {
+    display: block;
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+    height: 560px;
+    overflow: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 14px;
+    background: #f8fafc;
+    font-size: 13px;
+    line-height: 1.5;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+
+  /* History section */
+  .history-section {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .history-header h2 {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0;
+    color: #0f172a;
+  }
+
+  .btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-sm:hover {
+    background: #f1f5f9;
+  }
+
+  .history-empty {
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 16px;
+    text-align: center;
+    background: #f8fafc;
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+  }
+
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    transition: border-color 0.15s ease;
+  }
+
+  .history-item:hover {
+    border-color: #94a3b8;
+  }
+
+  .history-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .history-url {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-main);
+    word-break: break-all;
+  }
+
+  .history-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .history-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid var(--border-color);
+    background: #f8fafc;
+    color: var(--text-main);
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s ease;
+  }
+
+  .btn-action:hover {
+    background: #e2e8f0;
+  }
+
+  @media (max-width: 640px) {
+    .container {
+      padding: 16px;
+    }
+    .row {
+      flex-direction: column;
+    }
+    #fetchBtn {
+      width: 100%;
+    }
+    .toolbar {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    #frame, #source {
+      height: 420px;
+    }
+    .history-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .history-actions {
+      align-self: flex-end;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Multi-threaded Proxy Client</h1>
+      <p class="sub">Your request goes to the proxy server, which fetches the page and sends it back.</p>
+    </header>
+
+    <div class="row">
+      <input type="text" id="url" placeholder="Enter a URL, e.g. http://example.com">
+      <button id="fetchBtn">
+        <span id="spinner" class="spinner" style="display: none;"></span>
+        <span id="fetchBtnText">Fetch</span>
+      </button>
+    </div>
+
+    <div id="message">
+      <div id="statusContainer" class="msg-success" style="display: none;">
+        <span id="savedMsg"></span>
+        <span id="badge" class="badge" style="display: none;"></span>
+      </div>
+      <div id="errorMsg" class="msg-error" style="display: none;"></div>
+      <span id="loadingMsg" style="display: none;">Fetching...</span>
+    </div>
+
+    <div class="toolbar">
+      <div id="tabs">
+        <button id="tabRendered" class="tab-btn active">Rendered page</button>
+        <button id="tabSource" class="tab-btn">HTML source</button>
+      </div>
+      <div class="scripts-toggle">
+        <label class="checkbox-label" for="allowScripts">
+          <input type="checkbox" id="allowScripts">
+          <span>Allow scripts</span>
+        </label>
+        <span class="note">Runs the fetched site's own JavaScript inside a sandboxed frame.</span>
+      </div>
+    </div>
+
+    <!-- sandbox="" blocks scripts in the fetched page, so it can't run code here -->
+    <iframe id="frame" sandbox=""></iframe>
+
+    <div id="sourceWrapper">
+      <div class="source-header">
+        <button id="copyBtn" type="button" class="btn-copy">Copy source</button>
+      </div>
+      <pre id="source"></pre>
+    </div>
+
+    <section id="historySection" class="history-section">
+      <div class="history-header">
+        <h2>History</h2>
+        <button id="clearHistoryBtn" type="button" class="btn-sm">Clear history</button>
+      </div>
+      <div id="historyEmpty" class="history-empty" style="display: none;">No pages fetched yet.</div>
+      <div id="historyList" class="history-list"></div>
+    </section>
+  </div>
+
+<script>
+  const urlBox = document.getElementById("url");
+  const fetchBtn = document.getElementById("fetchBtn");
+  const fetchBtnText = document.getElementById("fetchBtnText");
+  const spinner = document.getElementById("spinner");
+
+  const message = document.getElementById("message");
+  const statusContainer = document.getElementById("statusContainer");
+  const savedMsg = document.getElementById("savedMsg");
+  const badge = document.getElementById("badge");
+  const errorMsg = document.getElementById("errorMsg");
+  const loadingMsg = document.getElementById("loadingMsg");
+
+  const tabs = document.getElementById("tabs");
+  const tabRendered = document.getElementById("tabRendered");
+  const tabSource = document.getElementById("tabSource");
+  const allowScripts = document.getElementById("allowScripts");
+
+  const sourceWrapper = document.getElementById("sourceWrapper");
+  const source = document.getElementById("source");
+  const copyBtn = document.getElementById("copyBtn");
+
+  const historyList = document.getElementById("historyList");
+  const historyEmpty = document.getElementById("historyEmpty");
+  const clearHistoryBtn = document.getElementById("clearHistoryBtn");
+
+  let rawContent = "";
+  let currentBaseUrl = "";
+  let copyTimeout = null;
+
+  function getFrame() {
+    return document.getElementById("frame");
+  }
+
+  function showView(view) {
+    const rendered = view === "rendered";
+    const f = getFrame();
+    if (f) f.style.display = rendered ? "block" : "none";
+    sourceWrapper.style.display = rendered ? "none" : "block";
+    tabRendered.classList.toggle("active", rendered);
+    tabSource.classList.toggle("active", !rendered);
+  }
+
+  function getBaseUrl(inputUrl) {
+    let u = inputUrl.trim();
+    if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(u)) {
+      u = "http://" + u;
+    }
+    return u;
+  }
+
+  function insertBaseTag(html, baseUrl) {
+    const escaped = baseUrl.replace(/"/g, "&quot;");
+    const baseTag = '<base href="' + escaped + '">';
+    const headMatch = html.match(/<head(\s[^>]*)?>/i);
+    if (headMatch) {
+      const insertIdx = headMatch.index + headMatch[0].length;
+      return html.slice(0, insertIdx) + baseTag + html.slice(insertIdx);
+    }
+    return baseTag + html;
+  }
+
+  function renderFrame() {
+    const oldFrame = getFrame();
+    if (!oldFrame) return;
+    const parent = oldFrame.parentNode;
+    const next = oldFrame.nextSibling;
+
+    // Make rendered view visible BEFORE inserting the new iframe
+    tabs.style.display = "flex";
+    showView("rendered");
+
+    // Remove the old iframe from the DOM
+    parent.removeChild(oldFrame);
+
+    // Create a fresh iframe element
+    const newFrame = document.createElement("iframe");
+    newFrame.id = "frame";
+    newFrame.setAttribute("sandbox", allowScripts.checked ? "allow-scripts" : "");
+
+    // Set srcdoc with base tag for rendered view only
+    if (rawContent) {
+      newFrame.srcdoc = insertBaseTag(rawContent, currentBaseUrl);
+    }
+
+    // Insert the new iframe into the same position
+    parent.insertBefore(newFrame, next);
+  }
+
+  allowScripts.addEventListener("change", () => {
+    if (rawContent) {
+      renderFrame();
+    }
+  });
+
+  copyBtn.addEventListener("click", async () => {
+    let copied = false;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(rawContent);
+        copied = true;
+      } catch (err) {
+        copied = false;
+      }
+    }
+
+    if (copied) {
+      copyBtn.textContent = "Copied!";
+      if (copyTimeout) clearTimeout(copyTimeout);
+      copyTimeout = setTimeout(() => {
+        copyBtn.textContent = "Copy source";
+      }, 1500);
+    } else {
+      const range = document.createRange();
+      range.selectNodeContents(source);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  });
+
+  function renderHistory(items) {
+    historyList.textContent = "";
+    if (!items || items.length === 0) {
+      historyEmpty.style.display = "block";
+      historyList.style.display = "none";
+      return;
+    }
+
+    historyEmpty.style.display = "none";
+    historyList.style.display = "flex";
+
+    items.forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "history-item";
+
+      const main = document.createElement("div");
+      main.className = "history-main";
+
+      const urlEl = document.createElement("div");
+      urlEl.className = "history-url";
+      urlEl.textContent = item.url || "";
+
+      const meta = document.createElement("div");
+      meta.className = "history-meta";
+
+      const timeEl = document.createElement("span");
+      timeEl.textContent = item.time || "";
+      meta.appendChild(timeEl);
+
+      if (item.source) {
+        const badgeEl = document.createElement("span");
+        badgeEl.className = "badge " + (item.source === "CACHE" ? "badge-cache" : "badge-fetched");
+        badgeEl.textContent = item.source;
+        meta.appendChild(badgeEl);
+      }
+
+      main.appendChild(urlEl);
+      main.appendChild(meta);
+
+      const actions = document.createElement("div");
+      actions.className = "history-actions";
+
+      const openBtn = document.createElement("button");
+      openBtn.type = "button";
+      openBtn.className = "btn-action";
+      openBtn.textContent = "Open";
+      openBtn.addEventListener("click", () => openSaved(item));
+
+      const downloadLink = document.createElement("a");
+      downloadLink.className = "btn-action";
+      downloadLink.textContent = "Download";
+      const encodedName = encodeURIComponent(item.filename || "");
+      downloadLink.setAttribute("href", "/saved/" + encodedName);
+      downloadLink.setAttribute("download", item.filename || "");
+
+      actions.appendChild(openBtn);
+      actions.appendChild(downloadLink);
+
+      row.appendChild(main);
+      row.appendChild(actions);
+
+      historyList.appendChild(row);
+    });
+  }
+
+  async function loadHistory() {
+    try {
+      const res = await fetch("/history");
+      if (!res.ok) return;
+      const data = await res.json();
+      renderHistory(data.items || []);
+    } catch (e) {
+      console.error("Failed to load history", e);
+    }
+  }
+
+  async function openSaved(item) {
+    try {
+      const encodedName = encodeURIComponent(item.filename || "");
+      const res = await fetch("/saved/" + encodedName);
+      if (!res.ok) {
+        errorMsg.textContent = "Error: Failed to load saved page (" + res.status + ")";
+        errorMsg.style.display = "block";
+        return;
+      }
+      const text = await res.text();
+
+      rawContent = text;
+      currentBaseUrl = getBaseUrl(item.url || "");
+
+      urlBox.value = item.url || "";
+
+      savedMsg.textContent = "Opened saved_pages/" + item.filename + " (from history)";
+      badge.style.display = "none";
+      badge.textContent = "";
+      errorMsg.style.display = "none";
+      loadingMsg.style.display = "none";
+      statusContainer.style.display = "flex";
+
+      source.textContent = rawContent;
+      tabs.style.display = "flex";
+      renderFrame();
+    } catch (e) {
+      errorMsg.textContent = "Error: Failed to load saved page";
+      errorMsg.style.display = "block";
+    }
+  }
+
+  clearHistoryBtn.addEventListener("click", async () => {
+    try {
+      const res = await fetch("/history/clear", { method: "POST" });
+      const data = await res.json();
+      if (data.ok) {
+        await loadHistory();
+      }
+    } catch (e) {
+      console.error("Failed to clear history", e);
+    }
+  });
+
+  async function fetchPage() {
+    const url = urlBox.value.trim();
+
+    fetchBtn.disabled = true;
+    spinner.style.display = "inline-block";
+    fetchBtnText.textContent = "Fetching...";
+
+    statusContainer.style.display = "none";
+    badge.style.display = "none";
+    errorMsg.style.display = "none";
+    loadingMsg.style.display = "inline";
+
+    tabs.style.display = "none";
+    var f = getFrame();
+    if (f) f.style.display = "none";
+    sourceWrapper.style.display = "none";
+
+    try {
+      const res = await fetch("/fetch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: url })
+      });
+      const data = await res.json();
+
+      loadingMsg.style.display = "none";
+
+      if (!data.ok) {
+        errorMsg.textContent = "Error: " + data.error;
+        errorMsg.style.display = "block";
+        return;
+      }
+
+      rawContent = data.content;
+      currentBaseUrl = getBaseUrl(url);
+
+      savedMsg.textContent = "Saved as saved_pages/" + data.filename;
+
+      if (data.info && data.info.source) {
+        const src = data.info.source;
+        const worker = data.info.worker || "";
+        const sec = data.info.seconds || "";
+
+        if (src === "FETCHED") {
+          badge.className = "badge badge-fetched";
+          badge.textContent = "Fetched from the web by " + worker + " in " + sec + "s";
+          badge.style.display = "inline-flex";
+        } else if (src === "CACHE") {
+          badge.className = "badge badge-cache";
+          badge.textContent = "Served from cache by " + worker + " in " + sec + "s";
+          badge.style.display = "inline-flex";
+        } else {
+          badge.style.display = "none";
+        }
+      } else {
+        badge.style.display = "none";
+      }
+
+      statusContainer.style.display = "flex";
+
+      source.textContent = rawContent;
+      tabs.style.display = "flex";
+      renderFrame();
+
+      // Reload history list after every successful fetch
+      loadHistory();
+    } catch (e) {
+      loadingMsg.style.display = "none";
+      errorMsg.textContent = "Error: could not reach the client app";
+      errorMsg.style.display = "block";
+    } finally {
+      fetchBtn.disabled = false;
+      spinner.style.display = "none";
+      fetchBtnText.textContent = "Fetch";
+    }
+  }
+
+  fetchBtn.addEventListener("click", fetchPage);
+  urlBox.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") fetchPage();
+  });
+  tabRendered.addEventListener("click", () => showView("rendered"));
+  tabSource.addEventListener("click", () => showView("source"));
+
+  // Initial history load
+  loadHistory();
+</script>
+</body>
+</html>

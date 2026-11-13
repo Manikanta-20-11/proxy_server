@@ -1,0 +1,18 @@
+[
+  {
+    "filename": "amazon.in_2026-11-13_112715_eaaf.html",
+    "url": "amazon.in",
+    "time": "2026-11-13 11:27:15",
+    "source": "FETCHED",
+    "worker": "Worker-3",
+    "seconds": "3.334"
+  },
+  {
+    "filename": "amazon.in_2026-11-13_112805_0019.html",
+    "url": "amazon.in",
+    "time": "2026-11-13 11:28:05",
+    "source": "CACHE",
+    "worker": "Worker-2",
+    "seconds": "0.000"
+  }
+]
