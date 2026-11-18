@@ -14,5 +14,61 @@
     "source": "CACHE",
     "worker": "Worker-2",
     "seconds": "0.000"
+  },
+  {
+    "filename": "www.amazon.in_2026-11-18_152158_d27c.html",
+    "url": "https://www.amazon.in/",
+    "time": "2026-11-18 15:21:58",
+    "source": "FETCHED",
+    "worker": "Worker-1",
+    "seconds": "1.516"
+  },
+  {
+    "filename": "www.flipkart.com_2026-11-18_152223_3251.html",
+    "url": "https://www.flipkart.com/",
+    "time": "2026-11-18 15:22:23",
+    "source": "FETCHED",
+    "worker": "Worker-2",
+    "seconds": "3.377"
+  },
+  {
+    "filename": "student.srmap.edu.in_2026-11-18_152247_ca52.html",
+    "url": "https://student.srmap.edu.in/srmapstudentcorner/StudentLoginPage",
+    "time": "2026-11-18 15:22:47",
+    "source": "FETCHED",
+    "worker": "Worker-3",
+    "seconds": "1.599"
+  },
+  {
+    "filename": "www.phonepe.com_2026-11-18_152325_1af8.html",
+    "url": "https://www.phonepe.com/",
+    "time": "2026-11-18 15:23:25",
+    "source": "FETCHED",
+    "worker": "Worker-4",
+    "seconds": "3.683"
+  },
+  {
+    "filename": "www.programiz.com_2026-11-18_154856_1559.html",
+    "url": "https://www.programiz.com/c-programming/online-compiler/",
+    "time": "2026-11-18 15:48:56",
+    "source": "FETCHED",
+    "worker": "Worker-1",
+    "seconds": "2.218"
+  },
+  {
+    "filename": "www.onlinegdb.com_2026-11-18_155050_3d8d.html",
+    "url": "https://www.onlinegdb.com/",
+    "time": "2026-11-18 15:50:50",
+    "source": "FETCHED",
+    "worker": "Worker-2",
+    "seconds": "2.810"
+  },
+  {
+    "filename": "www.amazon.in_2026-11-18_160724_3291.html",
+    "url": "https://www.amazon.in/",
+    "time": "2026-11-18 16:07:24",
+    "source": "FETCHED",
+    "worker": "Worker-3",
+    "seconds": "1.245"
   }
 ]

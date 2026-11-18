@@ -3,12 +3,12 @@ import threading
 import time
 
 URLS = [
+    "https://student.srmap.edu.in/srmapstudentcorner/StudentLoginPage",
+    "https://www.phonepe.com/",
     "http://example.com",
-    "http://example.com/a",
-    "http://example.com/b",
-    "http://example.com/c",
-    "http://example.com/d",
-    "http://example.com/e",
+    "https://www.phonepe.com/",
+    "https://www.programiz.com/c-programming/online-compiler/",
+    "https://google.com",
 ] * 2   # 12 requests in total
 
 

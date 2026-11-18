@@ -4,6 +4,7 @@ import socket
 import json
 import threading
 import secrets
+import time
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -186,6 +187,80 @@ def get_saved_file(filename):
 def clear_history():
     save_history_atomically([])
     return jsonify(ok=True)
+
+
+@app.route("/demo")
+def demo_page():
+    return render_template("demo.html")
+
+
+@app.route("/demo/run", methods=["POST"])
+def demo_run():
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):
+        return jsonify(ok=False, error="Expected a JSON object"), 400
+    count = body.get("count", 12)
+    try:
+        count = int(count)
+    except (ValueError, TypeError):
+        count = 12
+    count = max(1, min(30, count))
+
+    site = body.get("site", "slow")
+    if site not in ("slow", "fast"):
+        return jsonify(ok=False, error="Site must be slow or fast"), 400
+    run_tag = secrets.token_hex(4)
+
+    if site == "fast":
+        urls = [f"http://example.com/?run={run_tag}&i={i}" for i in range(count)]
+    else:
+        urls = [f"http://127.0.0.1:8080/page{i}?run={run_tag}" for i in range(count)]
+
+    items = [None] * count
+    items_lock = threading.Lock()
+    start_gate = threading.Barrier(count + 1)
+    t0 = time.perf_counter()
+
+    def run_one(i, url):
+        start_gate.wait()
+        t_submit = time.perf_counter() - t0
+        ok, result, info = ask_proxy(url)
+        t_done = time.perf_counter() - t0
+
+        entry = {"i": i, "ok": ok, "worker": "", "source": "", "service": 0.0,
+                 "submit": t_submit, "done": t_done,
+                 "wait": 0.0, "error": ""}
+        if ok and info:
+            entry["worker"] = info.get("worker", "")
+            entry["source"] = info.get("source", "")
+            try:
+                svc = float(info.get("seconds", "0"))
+            except ValueError:
+                svc = 0.0
+            entry["service"] = svc
+            entry["wait"] = max(0.0, (t_done - svc) - t_submit)
+        elif not ok:
+            entry["error"] = result if isinstance(result, str) else str(result)
+
+        with items_lock:
+            items[i] = entry
+
+    threads = [threading.Thread(target=run_one, args=(i, url)) for i, url in enumerate(urls)]
+    for th in threads:
+        th.start()
+    start_gate.wait()
+    for th in threads:
+        th.join()
+
+    total = time.perf_counter() - t0
+
+    # Check if all failed (slow site unreachable)
+    all_failed = all(it is not None and not it["ok"] for it in items)
+    if all_failed and site == "slow":
+        return jsonify(ok=False, total=total, items=items,
+                       error="Start proxy/slow_server.py first")
+
+    return jsonify(ok=True, total=total, items=[it for it in items if it is not None])
 
 
 if __name__ == "__main__":

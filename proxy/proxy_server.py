@@ -10,7 +10,7 @@ from processor import fetch
 HOST = "127.0.0.1"
 PORT = 9000
 BACKLOG = 20
-NUM_WORKERS = 7
+NUM_WORKERS = 5
 
 # Shared objects: every worker uses these same ones
 connection_queue = queue.Queue()

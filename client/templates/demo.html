@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concurrency Demo — OS Proxy Client</title>
+<style>
+  :root {
+    --bg-page: #f8fafc;
+    --bg-card: #ffffff;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --border-color: #cbd5e1;
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-page);
+    color: var(--text-main);
+    margin: 0;
+    padding: 24px 16px;
+    line-height: 1.5;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px 28px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+
+  header { margin-bottom: 20px; }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+    color: #0f172a;
+  }
+
+  .sub {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin: 0;
+  }
+
+  .back-link {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--primary);
+    text-decoration: none;
+  }
+  .back-link:hover { text-decoration: underline; }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  .controls label {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  input[type=number] {
+    width: 70px;
+    padding: 8px 10px;
+    font-size: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    outline: none;
+    background: #fff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  input[type=number]:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+  }
+
+  select {
+    padding: 8px 12px;
+    font-size: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    outline: none;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+  select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+  }
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  #runBtn {
+    background: var(--primary);
+    color: #fff;
+    min-width: 100px;
+  }
+  #runBtn:hover:not(:disabled) {
+    background: var(--primary-hover);
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    border: 2px solid rgba(255,255,255,0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 7px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Error message */
+  .msg-error {
+    color: #b91c1c;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  /* Summary */
+  #summary {
+    display: none;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #15803d;
+  }
+
+  /* Section headings */
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 24px 0 12px 0;
+    color: #0f172a;
+  }
+
+  /* Timeline */
+  .timeline-card {
+    display: none;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    background: var(--bg-card);
+  }
+
+  .legend {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .legend-swatch {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    vertical-align: middle;
+    margin-right: 5px;
+  }
+
+  .timeline-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .worker-label {
+    width: 90px;
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+    text-align: right;
+    padding-right: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .bar-area {
+    flex: 1;
+    position: relative;
+    height: 28px;
+    background: #f1f5f9;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .bar-queue {
+    position: absolute;
+    top: 0;
+    height: 28px;
+    background: #fed7aa;
+    border-radius: 4px;
+  }
+
+  .bar-service {
+    position: absolute;
+    top: 0;
+    height: 28px;
+    background: var(--primary);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .time-axis {
+    display: flex;
+    margin-top: 4px;
+    margin-left: 90px;
+    position: relative;
+    height: 20px;
+  }
+
+  .time-tick {
+    position: absolute;
+    font-size: 11px;
+    color: var(--text-muted);
+    transform: translateX(-50%);
+  }
+
+  /* Results table */
+  .table-wrapper {
+    display: none;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead th {
+    text-align: left;
+    padding: 8px 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-bottom: 2px solid var(--border-color);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  tbody td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  tbody tr:nth-child(even) {
+    background: #f8fafc;
+  }
+
+  @media (max-width: 640px) {
+    .container { padding: 16px; }
+    .controls { flex-direction: column; align-items: stretch; }
+    .worker-label { width: 60px; font-size: 11px; }
+    .time-axis { margin-left: 60px; }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Concurrency Demo</h1>
+      <p class="sub">See the proxy's thread pool and queue in action.</p>
+      <a href="/" class="back-link">← Back to main client</a>
+    </header>
+
+    <div class="controls">
+      <label for="countInput">Requests:</label>
+      <input type="number" id="countInput" value="12" min="1" max="30">
+      <select id="siteSelect">
+        <option value="slow" selected>Slow site (2s per page)</option>
+        <option value="fast">Fast site (example.com)</option>
+      </select>
+      <button id="runBtn">
+        <span id="runSpinner" class="spinner" style="display:none;"></span>
+        <span id="runBtnText">Run</span>
+      </button>
+    </div>
+
+    <div id="errorBox" class="msg-error"></div>
+    <div id="summary"></div>
+
+    <div id="timelineCard" class="timeline-card">
+      <div class="section-title">Timeline</div>
+      <div class="legend">
+        <span><span class="legend-swatch" style="background:#2563eb;"></span>Being served by worker</span>
+        <span><span class="legend-swatch" style="background:#fed7aa;"></span>Waiting in queue</span>
+      </div>
+      <div id="timelineRows"></div>
+      <div id="timeAxis" class="time-axis"></div>
+    </div>
+
+    <div id="tableSection" class="table-wrapper">
+      <div class="section-title">Details</div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Worker</th>
+            <th>Source</th>
+            <th>Queue Wait</th>
+            <th>Service</th>
+            <th>Finished At</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+  var countInput   = document.getElementById("countInput");
+  var siteSelect   = document.getElementById("siteSelect");
+  var runBtn       = document.getElementById("runBtn");
+  var runSpinner   = document.getElementById("runSpinner");
+  var runBtnText   = document.getElementById("runBtnText");
+  var errorBox     = document.getElementById("errorBox");
+  var summary      = document.getElementById("summary");
+  var timelineCard = document.getElementById("timelineCard");
+  var timelineRows = document.getElementById("timelineRows");
+  var timeAxis     = document.getElementById("timeAxis");
+  var tableSection = document.getElementById("tableSection");
+  var resultsBody  = document.getElementById("resultsBody");
+
+  runBtn.addEventListener("click", runDemo);
+
+  function runDemo() {
+    var count = parseInt(countInput.value, 10);
+    if (isNaN(count) || count < 1) count = 1;
+    if (count > 30) count = 30;
+    countInput.value = count;
+
+    var site = siteSelect.value;
+
+    runBtn.disabled = true;
+    runSpinner.style.display = "inline-block";
+    runBtnText.textContent = "Running...";
+    errorBox.style.display = "none";
+    summary.style.display = "none";
+    timelineCard.style.display = "none";
+    tableSection.style.display = "none";
+
+    fetch("/demo/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ count: count, site: site })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (!data.ok) {
+        errorBox.textContent = "Error: " + (data.error || "Unknown error");
+        errorBox.style.display = "block";
+        return;
+      }
+      showResults(data, count, site);
+    })
+    .catch(function(err) {
+      errorBox.textContent = "Error: could not reach the client app";
+      errorBox.style.display = "block";
+    })
+    .finally(function() {
+      runBtn.disabled = false;
+      runSpinner.style.display = "none";
+      runBtnText.textContent = "Run";
+    });
+  }
+
+  function showResults(data, count, site) {
+    var items = data.items;
+    var total = data.total;
+
+    // Summary
+    var workerSet = {};
+    var svcTotal = 0;
+    for (var k = 0; k < items.length; k++) {
+      if (items[k].worker) workerSet[items[k].worker] = true;
+      svcTotal += items[k].service;
+    }
+    var workerCount = Object.keys(workerSet).length;
+    var seqEstimate;
+    if (site === "slow") {
+      seqEstimate = count * 2;
+    } else {
+      var avgSvc = items.length > 0 ? svcTotal / items.length : 0;
+      seqEstimate = Math.round(count * avgSvc * 100) / 100;
+    }
+    summary.textContent = "Total: " + total.toFixed(3) + "s — " + workerCount + " workers — sequential would be about " + seqEstimate + "s";
+    summary.style.display = "block";
+
+    // Timeline
+    buildTimeline(items);
+
+    // Table
+    buildTable(items);
+  }
+
+  function buildTimeline(items) {
+    // Group by worker
+    var groups = {};
+    for (var k = 0; k < items.length; k++) {
+      if (!items[k].ok || !items[k].worker) continue;
+      var w = items[k].worker;
+      if (!groups[w]) groups[w] = [];
+      groups[w].push(items[k]);
+    }
+
+    var workerNames = Object.keys(groups).sort();
+
+    // Max time
+    var maxTime = 0;
+    for (var k = 0; k < items.length; k++) {
+      if (items[k].done > maxTime) maxTime = items[k].done;
+    }
+    if (maxTime <= 0) maxTime = 1;
+
+    // Clear
+    timelineRows.textContent = "";
+    timeAxis.textContent = "";
+
+    for (var w = 0; w < workerNames.length; w++) {
+      var name = workerNames[w];
+      var row = document.createElement("div");
+      row.className = "timeline-row";
+
+      var label = document.createElement("div");
+      label.className = "worker-label";
+      label.textContent = name;
+      row.appendChild(label);
+
+      var barArea = document.createElement("div");
+      barArea.className = "bar-area";
+
+      var reqs = groups[name].sort(function(a, b) {
+        return (a.done - a.service) - (b.done - b.service);
+      });
+      // Separate request lanes keep every queue interval visible.
+      barArea.style.height = (reqs.length * 32) + "px";
+      for (var r = 0; r < reqs.length; r++) {
+        var item = reqs[r];
+        var serviceStart = item.done - item.service;
+
+        // Queue wait bar
+        var queueWidth = ((serviceStart - item.submit) / maxTime) * 100;
+        if (queueWidth > 0) {
+          var qBar = document.createElement("div");
+          qBar.className = "bar-queue";
+          qBar.style.top = (r * 32) + "px";
+          qBar.title = "Request " + item.i + ": waiting " + item.wait.toFixed(3) + "s";
+          qBar.style.left = (item.submit / maxTime * 100) + "%";
+          qBar.style.width = queueWidth + "%";
+          barArea.appendChild(qBar);
+        }
+
+        // Service bar
+        var sBar = document.createElement("div");
+        sBar.className = "bar-service";
+        sBar.style.top = (r * 32) + "px";
+        sBar.title = "Request " + item.i + ": service " + item.service.toFixed(3) + "s";
+        sBar.style.left = (serviceStart / maxTime * 100) + "%";
+        var sWidth = (item.service / maxTime) * 100;
+        sBar.style.width = sWidth + "%";
+        sBar.textContent = item.i;
+        barArea.appendChild(sBar);
+      }
+
+      row.appendChild(barArea);
+      timelineRows.appendChild(row);
+    }
+
+    // Time axis
+    for (var s = 0; s <= 6; s++) {
+      var tick = document.createElement("span");
+      tick.className = "time-tick";
+      tick.style.left = (s / 6 * 100) + "%";
+      tick.textContent = (maxTime * s / 6).toFixed(2) + "s";
+      timeAxis.appendChild(tick);
+    }
+
+    timelineCard.style.display = "block";
+  }
+
+  function buildTable(items) {
+    resultsBody.textContent = "";
+
+    // Sort by index
+    var sorted = items.slice().sort(function(a, b) { return a.i - b.i; });
+
+    for (var k = 0; k < sorted.length; k++) {
+      var it = sorted[k];
+      var tr = document.createElement("tr");
+
+      var tdNum = document.createElement("td");
+      tdNum.textContent = it.i;
+      tr.appendChild(tdNum);
+
+      var tdWorker = document.createElement("td");
+      tdWorker.textContent = it.worker || "—";
+      tr.appendChild(tdWorker);
+
+      var tdSource = document.createElement("td");
+      tdSource.title = it.error || "";
+      tdSource.textContent = it.source || (it.error ? "ERROR" : "—");
+      tr.appendChild(tdSource);
+
+      var tdWait = document.createElement("td");
+      tdWait.textContent = it.wait.toFixed(3) + "s";
+      tr.appendChild(tdWait);
+
+      var tdService = document.createElement("td");
+      tdService.textContent = it.service.toFixed(3) + "s";
+      tr.appendChild(tdService);
+
+      var tdDone = document.createElement("td");
+      tdDone.textContent = it.done.toFixed(3) + "s";
+      tr.appendChild(tdDone);
+
+      resultsBody.appendChild(tr);
+    }
+
+    tableSection.style.display = "block";
+  }
+</script>
+</body>
+</html>
